@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"github.com/Dreamacro/clash/component/dialer"
 )
 
 // Vehicle Type
@@ -87,7 +85,6 @@ func (h *HTTPVehicle) Read() ([]byte, error) {
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		DialContext:           dialer.DialContext,
 	}
 
 	client := http.Client{Transport: transport}
