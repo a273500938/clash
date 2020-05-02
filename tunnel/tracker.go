@@ -11,6 +11,7 @@ import (
 type tracker interface {
 	ID() string
 	Close() error
+	Chain() []string
 }
 
 type trackerInfo struct {
@@ -27,6 +28,10 @@ type tcpTracker struct {
 	C.Conn `json:"-"`
 	*trackerInfo
 	manager *Manager
+}
+
+func (tt *tcpTracker) Chain() []string {
+	return tt.trackerInfo.Chain
 }
 
 func (tt *tcpTracker) ID() string {
@@ -81,6 +86,10 @@ type udpTracker struct {
 	C.PacketConn `json:"-"`
 	*trackerInfo
 	manager *Manager
+}
+
+func (ut *udpTracker) Chain() []string {
+	return ut.trackerInfo.Chain
 }
 
 func (ut *udpTracker) ID() string {
