@@ -3,6 +3,7 @@ package outbound
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -125,5 +126,5 @@ func NewShadowSocksR(option ShadowSocksROption) (*ShadowSocksR, error) {
 }
 
 func (ssr *ShadowSocksR) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
-	return nil, nil
+	return nil, errors.New("Not supported now")
 }
