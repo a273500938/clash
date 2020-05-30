@@ -12,8 +12,8 @@ import (
 	"github.com/Dreamacro/clash/adapters/outboundgroup"
 	"github.com/Dreamacro/clash/adapters/provider"
 	"github.com/Dreamacro/clash/component/auth"
-	trie "github.com/Dreamacro/clash/component/domain-trie"
 	"github.com/Dreamacro/clash/component/fakeip"
+	"github.com/Dreamacro/clash/component/trie"
 	C "github.com/Dreamacro/clash/constant"
 	"github.com/Dreamacro/clash/dns"
 	"github.com/Dreamacro/clash/log"
@@ -28,6 +28,7 @@ type General struct {
 	Port               int          `json:"port"`
 	SocksPort          int          `json:"socks-port"`
 	RedirPort          int          `json:"redir-port"`
+	MixedPort          int          `json:"mixed-port"`
 	Authentication     []string     `json:"authentication"`
 	AllowLan           bool         `json:"allow-lan"`
 	BindAddress        string       `json:"bind-address"`
@@ -68,7 +69,7 @@ type Config struct {
 	General      *General
 	DNS          *DNS
 	Experimental *Experimental
-	Hosts        *trie.Trie
+	Hosts        *trie.DomainTrie
 	Rules        []C.Rule
 	Users        []auth.AuthUser
 	Proxies      map[string]C.Proxy
@@ -97,6 +98,7 @@ type RawConfig struct {
 	Port               int          `yaml:"port"`
 	SocksPort          int          `yaml:"socks-port"`
 	RedirPort          int          `yaml:"redir-port"`
+	MixedPort          int          `yaml:"mixed-port"`
 	Authentication     []string     `yaml:"authentication"`
 	AllowLan           bool         `yaml:"allow-lan"`
 	BindAddress        string       `yaml:"bind-address"`
@@ -217,6 +219,7 @@ func parseGeneral(cfg *RawConfig) (*General, error) {
 	port := cfg.Port
 	socksPort := cfg.SocksPort
 	redirPort := cfg.RedirPort
+	mixedPort := cfg.MixedPort
 	allowLan := cfg.AllowLan
 	bindAddress := cfg.BindAddress
 	externalController := cfg.ExternalController
@@ -237,6 +240,7 @@ func parseGeneral(cfg *RawConfig) (*General, error) {
 		Port:               port,
 		SocksPort:          socksPort,
 		RedirPort:          redirPort,
+		MixedPort:          mixedPort,
 		AllowLan:           allowLan,
 		BindAddress:        bindAddress,
 		Mode:               mode,
@@ -446,7 +450,7 @@ func parseRules(cfg *RawConfig, proxies map[string]C.Proxy) ([]C.Rule, error) {
 	return rules, nil
 }
 
-func parseHosts(cfg *RawConfig) (*trie.Trie, error) {
+func parseHosts(cfg *RawConfig) (*trie.DomainTrie, error) {
 	tree := trie.New()
 	if len(cfg.Hosts) != 0 {
 		for domain, ipStr := range cfg.Hosts {
@@ -582,7 +586,7 @@ func parseDNS(cfg RawDNS) (*DNS, error) {
 			return nil, err
 		}
 
-		var host *trie.Trie
+		var host *trie.DomainTrie
 		// fake ip skip host filter
 		if len(cfg.FakeIPFilter) != 0 {
 			host = trie.New()
