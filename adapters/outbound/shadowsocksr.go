@@ -15,6 +15,7 @@ import (
 	SSRObfs "github.com/mzz2017/shadowsocksR/obfs"
 	SSRProtocol "github.com/mzz2017/shadowsocksR/protocol"
 	SSRServer "github.com/mzz2017/shadowsocksR/ssr"
+	cipher "github.com/mzz2017/shadowsocksR/streamCipher"
 )
 
 type ShadowSocksR struct {
@@ -57,7 +58,8 @@ func (ssr *ShadowSocksR) DialContext(ctx context.Context, metadata *C.Metadata) 
 	}
 	tcpKeepAlive(c)
 
-	cipher, err := SSRUtils.NewStreamCipher(ssr.cipher, ssr.password)
+	// cipher, err := SSRUtils.NewStreamCipher(ssr.cipher, ssr.password)
+	cipher, err := cipher.NewStreamCipher(ssr.cipher, ssr.password)
 	if err != nil {
 		return nil, fmt.Errorf("ssr %s initialize error: %w", ssr.server, err)
 	}
