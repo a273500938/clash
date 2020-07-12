@@ -7,9 +7,8 @@ import (
 )
 
 // StreamConn wraps a stream-oriented net.Conn with protocol decoding/encoding
-func StreamConn(c net.Conn, p Protocol) net.Conn {
-	p.init()
-	return &Conn{Conn: c, Protocol: p}
+func StreamConn(c net.Conn, p Protocol, iv []byte) net.Conn {
+	return &Conn{Conn: c, Protocol: p.initForConn(iv)}
 }
 
 // Conn represents a protocol connection

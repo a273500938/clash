@@ -24,11 +24,16 @@ func newAuthSHA1V4(b *Base) Protocol {
 	return &authSHA1V4{Base: b, authData: &authData{}}
 }
 
-func (a *authSHA1V4) init() {
-	a.clientID = nil
-	a.connectionID = 0
-	a.headerSent = false
-	a.buffer.Reset()
+func (a *authSHA1V4) initForConn(iv []byte) Protocol {
+	return &authSHA1V4{
+		Base: &Base{
+			IV:     iv,
+			Key:    a.Key,
+			TCPMss: a.TCPMss,
+			Param:  a.Param,
+		},
+		authData: a.authData,
+	}
 }
 
 func (a *authSHA1V4) SetIV(iv []byte) {

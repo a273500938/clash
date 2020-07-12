@@ -35,7 +35,6 @@ func init() {
 func newAuthAES128MD5(b *Base) Protocol {
 	return &authAES128{
 		Base:       b,
-		recvInfo:   &recvInfo{buffer: new(bytes.Buffer)},
 		authData:   &authData{},
 		salt:       "auth_aes128_md5",
 		hmac:       tools.HmacMD5,
@@ -43,15 +42,21 @@ func newAuthAES128MD5(b *Base) Protocol {
 	}
 }
 
-func (a *authAES128) init() {
-	a.recvID = 1
-	a.buffer.Reset()
-	a.clientID = nil
-	a.connectionID = 0
-	a.hasSentHeader = false
-	a.packID = 1
-	a.userKey = nil
-	a.uid = [4]byte{}
+func (a *authAES128) initForConn(iv []byte) Protocol {
+	return &authAES128{
+		Base: &Base{
+			IV:     iv,
+			Key:    a.Key,
+			TCPMss: a.TCPMss,
+			Param:  a.Param,
+		},
+		recvInfo:   &recvInfo{recvID: 1, buffer: new(bytes.Buffer)},
+		authData:   a.authData,
+		packID:     1,
+		salt:       a.salt,
+		hmac:       a.hmac,
+		hashDigest: a.hashDigest,
+	}
 }
 
 func (a *authAES128) SetIV(iv []byte) {

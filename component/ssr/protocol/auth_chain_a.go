@@ -46,7 +46,6 @@ func init() {
 func newAuthChainA(b *Base) Protocol {
 	return &authChain{
 		Base:       b,
-		recvInfo:   &recvInfo{buffer: new(bytes.Buffer)},
 		authData:   &authData{},
 		salt:       "auth_chain_a",
 		hmac:       tools.HmacMD5,
@@ -55,20 +54,21 @@ func newAuthChainA(b *Base) Protocol {
 	}
 }
 
-func (a *authChain) init() {
-	a.recvID = 1
-	a.buffer.Reset()
-	a.clientID = nil
-	a.connectionID = 0
-	a.randomClient.v = [2]uint64{}
-	a.randomServer.v = [2]uint64{}
-	a.headerSent = false
-	a.lastClientHash = nil
-	a.lastServerHash = nil
-	a.userKey = nil
-	a.dataSizeList = []int{}
-	a.dataSizeList2 = []int{}
-	a.chunkID = 0
+func (a *authChain) initForConn(iv []byte) Protocol {
+	r := &authChain{
+		Base: &Base{
+			IV:     iv,
+			Key:    a.Key,
+			TCPMss: a.TCPMss,
+			Param:  a.Param,
+		},
+		recvInfo:   &recvInfo{recvID: 1, buffer: new(bytes.Buffer)},
+		authData:   a.authData,
+		salt:       a.salt,
+		hmac:       a.hmac,
+		hashDigest: a.hashDigest,
+		rnd:        a.rnd,
+	}
 	if a.salt == "auth_chain_b" {
 		random := a.randomServer
 		// random := &shift128PlusContext{}
@@ -85,6 +85,7 @@ func (a *authChain) init() {
 		}
 		sort.Ints(a.dataSizeList2)
 	}
+	return r
 }
 
 func (a *authChain) SetIV(iv []byte) {

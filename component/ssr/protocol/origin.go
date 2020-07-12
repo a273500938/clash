@@ -7,10 +7,10 @@ func init() {
 }
 
 func newOrigin(b *Base) Protocol {
-	return &origin{Base: b}
+	return &origin{}
 }
 
-func (o *origin) init() {}
+func (o *origin) initForConn(iv []byte) Protocol { return &origin{} }
 
 func (o *origin) SetIV(iv []byte) {
 	o.IV = iv
