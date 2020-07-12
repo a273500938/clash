@@ -8,8 +8,7 @@ import (
 
 // StreamConn wraps a stream-oriented net.Conn with obfs decoding/encoding
 func StreamConn(c net.Conn, o Obfs) net.Conn {
-	o.init()
-	return &Conn{Conn: c, Obfs: o}
+	return &Conn{Conn: c, Obfs: o.initForConn()}
 }
 
 // Conn represents an obfs connection

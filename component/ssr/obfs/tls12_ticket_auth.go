@@ -34,17 +34,17 @@ func init() {
 
 func newTLS12Ticket(b *Base) Obfs {
 	return &tls12Ticket{
-		Base:        b,
-		tlsAuthData: &tlsAuthData{},
+		Base: b,
 	}
 }
 
-func (t *tls12Ticket) init() {
-	rand.Read(t.localClientID[:])
-	t.handshakeStatus = 0
-	t.sendSaver.Reset()
-	t.recvBuffer.Reset()
-	t.buffer.Reset()
+func (t *tls12Ticket) initForConn() Obfs {
+	r := &tls12Ticket{
+		Base:        t.Base,
+		tlsAuthData: &tlsAuthData{},
+	}
+	rand.Read(r.localClientID[:])
+	return r
 }
 
 func (t *tls12Ticket) Decode(b []byte) ([]byte, bool, error) {

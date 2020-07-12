@@ -10,7 +10,7 @@ func newPlain(b *Base) Obfs {
 	return &plain{}
 }
 
-func (p *plain) init() {}
+func (p *plain) initForConn() Obfs { return &plain{} }
 
 func (p *plain) Encode(b []byte) ([]byte, error) {
 	return b, nil

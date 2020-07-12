@@ -24,9 +24,13 @@ func newHTTPSimple(b *Base) Obfs {
 	return &httpObfs{Base: b}
 }
 
-func (h *httpObfs) init() {
-	h.firstRequest = true
-	h.firstResponse = true
+func (h *httpObfs) initForConn() Obfs {
+	return &httpObfs{
+		Base:          h.Base,
+		firstRequest:  true,
+		firstResponse: true,
+		post:          h.post,
+	}
 }
 
 func (h *httpObfs) Decode(b []byte) ([]byte, bool, error) {

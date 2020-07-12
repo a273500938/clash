@@ -22,11 +22,12 @@ func newRandomHead(b *Base) Obfs {
 	return &randomHead{Base: b}
 }
 
-func (r *randomHead) init() {
-	r.firstRequest = true
-	r.firstResponse = true
-	r.headerSent = false
-	r.buffer = nil
+func (r *randomHead) initForConn() Obfs {
+	return &randomHead{
+		Base:          r.Base,
+		firstRequest:  true,
+		firstResponse: true,
+	}
 }
 
 func (r *randomHead) Encode(b []byte) (encoded []byte, err error) {
