@@ -69,21 +69,21 @@ func (a *authChain) initForConn(iv []byte) Protocol {
 		hashDigest: a.hashDigest,
 		rnd:        a.rnd,
 	}
-	if a.salt == "auth_chain_b" {
-		random := a.randomServer
+	if r.salt == "auth_chain_b" {
+		random := r.randomServer
 		// random := &shift128PlusContext{}
-		random.InitFromBin(a.Key)
+		random.InitFromBin(r.Key)
 		len := random.Next()%8 + 4
 		for i := 0; i < int(len); i++ {
-			a.dataSizeList = append(a.dataSizeList, (int)(random.Next()%2340%2040%1440))
+			r.dataSizeList = append(r.dataSizeList, (int)(random.Next()%2340%2040%1440))
 		}
-		sort.Ints(a.dataSizeList)
+		sort.Ints(r.dataSizeList)
 
 		len = random.Next()%16 + 8
 		for i := 0; i < int(len); i++ {
-			a.dataSizeList2 = append(a.dataSizeList2, (int)(random.Next()%2340%2040%1440))
+			r.dataSizeList2 = append(r.dataSizeList2, (int)(random.Next()%2340%2040%1440))
 		}
-		sort.Ints(a.dataSizeList2)
+		sort.Ints(r.dataSizeList2)
 	}
 	return r
 }
