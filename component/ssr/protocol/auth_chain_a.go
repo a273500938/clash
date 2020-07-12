@@ -210,6 +210,8 @@ const authHeadLength = 4 + 8 + 4 + 16 + 4
 
 func (a *authChain) packAuthData(data []byte) (outData []byte) {
 	outData = make([]byte, authHeadLength, authHeadLength+1500)
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 	a.connectionID++
 	if a.connectionID > 0xFF000000 {
 		rand.Read(a.clientID)

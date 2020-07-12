@@ -189,6 +189,8 @@ func (a *authAES128) packAuthData(data []byte) (ret []byte) {
 	copy(key[len(a.IV):], a.Key)
 
 	rand.Read(ret[dataOffset-randSize:])
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 	a.connectionID++
 	if a.connectionID > 0xFF000000 {
 		a.clientID = nil

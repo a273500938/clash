@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 type authData struct {
 	clientID     []byte
 	connectionID uint32
+	mutex        sync.Mutex
 }
 
 type recvInfo struct {

@@ -150,6 +150,8 @@ func (a *authSHA1V4) packAuthData(data []byte) (ret []byte) {
 	dataOffset := randSize + 4 + 2
 	retSize := dataOffset + dataSize + 12 + tools.HmacSHA1Len
 	ret = make([]byte, retSize)
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 	a.connectionID++
 	if a.connectionID > 0xFF000000 {
 		a.clientID = nil
