@@ -41,8 +41,7 @@ func (ssr *ShadowSocksR) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn,
 	if !ok {
 		return nil, fmt.Errorf("invalid connection type")
 	}
-	ssr.protocol.SetIV(conn.IV())
-	c = protocol.StreamConn(c, ssr.protocol)
+	c = protocol.StreamConn(c, ssr.protocol, conn.IV())
 	_, err := c.Write(serializesSocksAddr(metadata))
 	return c, err
 }

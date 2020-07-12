@@ -63,9 +63,10 @@ func (a *authAES128) SetIV(iv []byte) {
 	a.IV = iv
 }
 
-func (a *authAES128) Decode(b []byte) ([]byte, error) {
+func (a *authAES128) Decode(b []byte) ([]byte, int, error) {
 	a.buffer.Reset()
 	bSize := len(b)
+	readSize := 0
 	key := make([]byte, len(a.userKey)+4)
 	copy(key, a.userKey)
 	for bSize > 4 {
@@ -73,11 +74,11 @@ func (a *authAES128) Decode(b []byte) ([]byte, error) {
 
 		h := a.hmac(key, b[0:2])
 		if h[0] != b[2] || h[1] != b[3] {
-			return nil, errAuthAES128HMACError
+			return nil, 0, errAuthAES128HMACError
 		}
 		length := int(binary.LittleEndian.Uint16(b[0:2]))
 		if length >= 8192 || length < 8 {
-			return nil, errAuthAES128DataLengthError
+			return nil, 0, errAuthAES128DataLengthError
 		}
 		if length > bSize {
 			break
@@ -93,8 +94,9 @@ func (a *authAES128) Decode(b []byte) ([]byte, error) {
 		a.buffer.Write(b[pos : length-4])
 		b = b[length:]
 		bSize -= length
+		readSize += length
 	}
-	return a.buffer.Bytes(), nil
+	return a.buffer.Bytes(), readSize, nil
 }
 
 func (a *authAES128) Encode(b []byte) ([]byte, error) {

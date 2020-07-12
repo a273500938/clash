@@ -92,9 +92,10 @@ func (a *authChain) SetIV(iv []byte) {
 	a.IV = iv
 }
 
-func (a *authChain) Decode(b []byte) ([]byte, error) {
+func (a *authChain) Decode(b []byte) ([]byte, int, error) {
 	a.buffer.Reset()
 	key := make([]byte, len(a.userKey)+4)
+	readSize := 0
 	copy(key, a.userKey)
 	for len(b) > 4 {
 		binary.LittleEndian.PutUint32(key[len(a.userKey):], a.recvID)
@@ -102,7 +103,7 @@ func (a *authChain) Decode(b []byte) ([]byte, error) {
 		randLen := a.getServerRandLen(dataLen, 4)
 		length := randLen + dataLen
 		if length >= 4096 {
-			return nil, errAuthChainDataLengthError
+			return nil, 0, errAuthChainDataLengthError
 		}
 		length += 4
 		if length > len(b) {
@@ -111,7 +112,7 @@ func (a *authChain) Decode(b []byte) ([]byte, error) {
 
 		hash := a.hmac(key, b[:length-2])
 		if !bytes.Equal(hash[:2], b[length-2:length]) {
-			return nil, errAuthChainHMACError
+			return nil, 0, errAuthChainHMACError
 		}
 		var dataPos int
 		if dataLen > 0 && randLen > 0 {
@@ -128,8 +129,9 @@ func (a *authChain) Decode(b []byte) ([]byte, error) {
 		a.lastServerHash = hash
 		a.recvID++
 		b = b[length:]
+		readSize += length
 	}
-	return a.buffer.Bytes(), nil
+	return a.buffer.Bytes(), readSize, nil
 }
 
 func (a *authChain) Encode(b []byte) ([]byte, error) {

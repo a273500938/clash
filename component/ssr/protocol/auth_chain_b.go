@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"bytes"
 	"sort"
 
 	"github.com/Dreamacro/clash/component/ssr/tools"
@@ -14,7 +13,6 @@ func init() {
 func newAuthChainB(b *Base) Protocol {
 	return &authChain{
 		Base:       b,
-		recvInfo:   &recvInfo{buffer: new(bytes.Buffer)},
 		authData:   &authData{},
 		salt:       "auth_chain_b",
 		hmac:       tools.HmacMD5,

@@ -40,17 +40,18 @@ func (a *authSHA1V4) SetIV(iv []byte) {
 	a.IV = iv
 }
 
-func (a *authSHA1V4) Decode(b []byte) ([]byte, error) {
+func (a *authSHA1V4) Decode(b []byte) ([]byte, int, error) {
 	a.buffer.Reset()
 	bSize := len(b)
+	originalSize := bSize
 	for bSize > 4 {
 		crc32 := tools.CalcCRC32(b, 2, 0xFFFFFFFF)
 		if binary.LittleEndian.Uint16(b[2:4]) != uint16(crc32&0xFFFF) {
-			return nil, errAuthSHA1v4CRC32Error
+			return nil, 0, errAuthSHA1v4CRC32Error
 		}
 		length := int(binary.BigEndian.Uint16(b[0:2]))
 		if length >= 8192 || length < 8 {
-			return nil, errAuthSHA1v4DataLengthError
+			return nil, 0, errAuthSHA1v4DataLengthError
 		}
 		if length > bSize {
 			break
@@ -68,10 +69,10 @@ func (a *authSHA1V4) Decode(b []byte) ([]byte, error) {
 			bSize -= length
 			b = b[length:]
 		} else {
-			return nil, errAuthSHA1v4IncorrectChecksum
+			return nil, 0, errAuthSHA1v4IncorrectChecksum
 		}
 	}
-	return a.buffer.Bytes(), nil
+	return a.buffer.Bytes(), originalSize - bSize, nil
 }
 
 func (a *authSHA1V4) Encode(b []byte) ([]byte, error) {

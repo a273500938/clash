@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"net"
 
 	"github.com/Dreamacro/clash/common/pool"
@@ -15,8 +16,9 @@ func StreamConn(c net.Conn, p Protocol, iv []byte) net.Conn {
 type Conn struct {
 	net.Conn
 	Protocol
-	buf    []byte
-	offset int
+	buf          []byte
+	offset       int
+	underDecoded bytes.Buffer
 }
 
 func (c *Conn) Read(b []byte) (int, error) {
@@ -34,10 +36,17 @@ func (c *Conn) Read(b []byte) (int, error) {
 		pool.Put(buf)
 		return 0, err
 	}
-	decoded, err := c.Decode(buf[:n])
+	c.underDecoded.Write(buf[:n])
+	buf = c.underDecoded.Bytes()
+	decoded, length, err := c.Decode(buf)
 	if err != nil {
+		c.underDecoded.Reset()
 		return 0, nil
 	}
+	if length == 0 {
+		return 0, nil
+	}
+	c.underDecoded.Next(length)
 	n = copy(b, decoded)
 	if len(decoded) > len(b) {
 		c.buf = decoded
