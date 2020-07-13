@@ -21,7 +21,7 @@ func (n *none) IVSize() int {
 }
 
 func (n *none) Encrypter(iv []byte) cipher.Stream {
-	return new(noneStream)
+	return &noneStream{}
 }
 
 func (n *none) Decrypter(iv []byte) cipher.Stream {
