@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dreamacro/clash/common/pool"
 	"github.com/Dreamacro/clash/component/ssr/encryption"
 	"github.com/Dreamacro/clash/component/ssr/tools"
 )
@@ -77,7 +78,8 @@ func (a *authChain) SetIV(iv []byte) {
 
 func (a *authChain) Decode(b []byte) ([]byte, int, error) {
 	a.buffer.Reset()
-	key := make([]byte, len(a.userKey)+4)
+	key := pool.Get(len(a.userKey) + 4)
+	defer pool.Put(key)
 	readSize := 0
 	copy(key, a.userKey)
 	for len(b) > 4 {
@@ -103,9 +105,10 @@ func (a *authChain) Decode(b []byte) ([]byte, int, error) {
 		} else {
 			dataPos = 2
 		}
-		d := make([]byte, dataLen)
+		d := pool.Get(dataLen)
 		a.dec.XORKeyStream(d, b[dataPos:dataPos+dataLen])
 		a.buffer.Write(d)
+		pool.Put(d)
 		if a.recvID == 1 {
 			a.TCPMss = int(binary.LittleEndian.Uint16(a.buffer.Next(2)))
 		}
@@ -134,17 +137,19 @@ func (a *authChain) Encode(b []byte) ([]byte, error) {
 	var unitSize = a.TCPMss - 4
 	for bSize > unitSize {
 		dataLen, randLength := a.packedDataLen(b[offset : offset+unitSize])
-		d := make([]byte, dataLen)
+		d := pool.Get(dataLen)
 		a.packData(d, b[offset:offset+unitSize], randLength)
 		a.buffer.Write(d)
+		pool.Put(d)
 		bSize -= unitSize
 		offset += unitSize
 	}
 	if bSize > 0 {
 		dataLen, randLength := a.packedDataLen(b[offset:])
-		d := make([]byte, dataLen)
+		d := pool.Get(dataLen)
 		a.packData(d, b[offset:], randLength)
 		a.buffer.Write(d)
+		pool.Put(d)
 	}
 	return a.buffer.Bytes(), nil
 }
@@ -182,7 +187,8 @@ func (a *authChain) packData(outData []byte, data []byte, randLength int) {
 	}
 
 	userKeyLen := uint8(len(a.userKey))
-	key := make([]byte, userKeyLen+4)
+	key := pool.Get(int(userKeyLen + 4))
+	defer pool.Put(key)
 	copy(key, a.userKey)
 	a.chunkID++
 	binary.LittleEndian.PutUint32(key[userKeyLen:], a.chunkID)

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/Dreamacro/clash/common/pool"
 	"github.com/Dreamacro/clash/component/ssr/tools"
 )
 
@@ -114,7 +115,8 @@ func (a *authSHA1V4) packData(data []byte) (ret []byte) {
 	}
 
 	retSize := randSize + dataSize + 8
-	ret = make([]byte, retSize)
+	ret = pool.Get(retSize)
+	defer pool.Put(ret)
 	// 0~1, ret size
 	binary.BigEndian.PutUint16(ret[:2], uint16(retSize&0xFFFF))
 	// 2~3, crc of ret size

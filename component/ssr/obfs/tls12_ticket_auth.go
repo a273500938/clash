@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dreamacro/clash/common/pool"
 	"github.com/Dreamacro/clash/component/ssr/tools"
 )
 
@@ -70,9 +71,10 @@ func (t *tls12Ticket) Decode(b []byte) ([]byte, bool, error) {
 				t.recvBuffer.Write(unread)
 				break
 			}
-			d := make([]byte, size)
+			d := pool.Get(size)
 			t.recvBuffer.Read(d)
 			t.buffer.Write(d)
+			pool.Put(d)
 		}
 		return t.buffer.Bytes(), false, nil
 	}

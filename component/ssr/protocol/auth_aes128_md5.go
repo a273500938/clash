@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dreamacro/clash/common/pool"
 	"github.com/Dreamacro/clash/component/ssr/encryption"
 	"github.com/Dreamacro/clash/component/ssr/tools"
 )
@@ -67,7 +68,8 @@ func (a *authAES128) Decode(b []byte) ([]byte, int, error) {
 	a.buffer.Reset()
 	bSize := len(b)
 	readSize := 0
-	key := make([]byte, len(a.userKey)+4)
+	key := pool.Get(len(a.userKey) + 4)
+	defer pool.Put(key)
 	copy(key, a.userKey)
 	for bSize > 4 {
 		binary.LittleEndian.PutUint32(key[len(key)-4:], a.recvID)
@@ -142,11 +144,13 @@ func (a *authAES128) packData(data []byte) (ret []byte) {
 	}
 
 	retSize := randSize + dataSize + 8
-	ret = make([]byte, retSize)
+	ret = pool.Get(retSize)
+	defer pool.Put(ret)
 	// 0~1, ret_size
 	binary.LittleEndian.PutUint16(ret[0:], uint16(retSize&0xFFFF))
 	// 2~3, hmac
-	key := make([]byte, len(a.userKey)+4)
+	key := pool.Get(len(a.userKey) + 4)
+	defer pool.Put(key)
 	copy(key, a.userKey)
 	binary.LittleEndian.PutUint32(key[len(key)-4:], a.packID)
 	h := a.hmac(key, ret[:2])
