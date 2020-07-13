@@ -258,7 +258,7 @@ func (a *authChain) packAuthData(data []byte) (outData []byte) {
 	}
 	// final HMAC
 	{
-		a.lastServerHash = a.hmac(a.userKey, encrypt[0:20])
+		a.lastServerHash = a.hmac(a.userKey, encrypt[:20])
 
 		copy(outData[12:], encrypt)
 		copy(outData[12+20:], a.lastServerHash[:4])

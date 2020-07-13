@@ -72,11 +72,11 @@ func (a *authAES128) Decode(b []byte) ([]byte, int, error) {
 	for bSize > 4 {
 		binary.LittleEndian.PutUint32(key[len(key)-4:], a.recvID)
 
-		h := a.hmac(key, b[0:2])
+		h := a.hmac(key, b[:2])
 		if h[0] != b[2] || h[1] != b[3] {
 			return nil, 0, errAuthAES128HMACError
 		}
-		length := int(binary.LittleEndian.Uint16(b[0:2]))
+		length := int(binary.LittleEndian.Uint16(b[:2]))
 		if length >= 8192 || length < 8 {
 			return nil, 0, errAuthAES128DataLengthError
 		}
@@ -149,7 +149,7 @@ func (a *authAES128) packData(data []byte) (ret []byte) {
 	key := make([]byte, len(a.userKey)+4)
 	copy(key, a.userKey)
 	binary.LittleEndian.PutUint32(key[len(key)-4:], a.packID)
-	h := a.hmac(key, ret[0:2])
+	h := a.hmac(key, ret[:2])
 	copy(ret[2:4], h[:2])
 	// 4~rand_size+4, rand number
 	rand.Read(ret[4 : 4+randSize])
@@ -208,7 +208,7 @@ func (a *authAES128) packAuthData(data []byte) (ret []byte) {
 	binary.LittleEndian.PutUint32(encrypt[8:], a.connectionID)
 
 	now := time.Now().Unix()
-	binary.LittleEndian.PutUint32(encrypt[0:4], uint32(now))
+	binary.LittleEndian.PutUint32(encrypt[:4], uint32(now))
 
 	binary.LittleEndian.PutUint16(encrypt[12:], uint16(retSize&0xFFFF))
 	binary.LittleEndian.PutUint16(encrypt[14:], uint16(randSize&0xFFFF))
@@ -241,17 +241,17 @@ func (a *authAES128) packAuthData(data []byte) (ret []byte) {
 	copy(encrypt[:4], a.uid[:])
 	copy(encrypt[4:4+16], encryptData)
 
-	h := a.hmac(key, encrypt[0:20])
+	h := a.hmac(key, encrypt[:20])
 	copy(encrypt[20:], h[:4])
 
-	rand.Read(ret[0:1])
-	h = a.hmac(key, ret[0:1])
-	copy(ret[1:], h[0:7-1])
+	rand.Read(ret[:1])
+	h = a.hmac(key, ret[:1])
+	copy(ret[1:], h[:7-1])
 
 	copy(ret[7:], encrypt)
 	copy(ret[dataOffset:], data)
 
-	h = a.hmac(a.userKey, ret[0:retSize-4])
+	h = a.hmac(a.userKey, ret[:retSize-4])
 	copy(ret[retSize-4:], h[:4])
 
 	return

@@ -56,9 +56,9 @@ func (t *tls12Ticket) Decode(b []byte) ([]byte, bool, error) {
 		t.recvBuffer.Write(b)
 		for t.recvBuffer.Len() > 5 {
 			var h [5]byte
-			_, _ = t.recvBuffer.Read(h[:])
-			if !bytes.Equal(h[0:3], []byte{0x17, 0x3, 0x3}) {
-				log.Println("incorrect magic number", h[0:3], ", 0x170303 is expected")
+			t.recvBuffer.Read(h[:])
+			if !bytes.Equal(h[:3], []byte{0x17, 0x3, 0x3}) {
+				log.Println("incorrect magic number", h[:3], ", 0x170303 is expected")
 				return nil, false, errTLS12TicketAuthIncorrectMagicNumber
 			}
 			size := int(binary.BigEndian.Uint16(h[3:5]))
@@ -71,7 +71,7 @@ func (t *tls12Ticket) Decode(b []byte) ([]byte, bool, error) {
 				break
 			}
 			d := make([]byte, size)
-			_, _ = t.recvBuffer.Read(d)
+			t.recvBuffer.Read(d)
 			t.buffer.Write(d)
 		}
 		return t.buffer.Bytes(), false, nil
@@ -134,7 +134,7 @@ func (t *tls12Ticket) Encode(b []byte) ([]byte, error) {
 					l = len(b) - start
 					packData(&t.buffer, b[start:start+l])
 				}
-				_, _ = io.Copy(&t.sendSaver, &t.buffer)
+				io.Copy(&t.sendSaver, &t.buffer)
 			}
 			return []byte{}, nil
 		}
@@ -145,7 +145,7 @@ func (t *tls12Ticket) Encode(b []byte) ([]byte, error) {
 		h := t.hmacSHA1(hmacData[:33])
 		copy(hmacData[33:], h)
 		t.buffer.Write(hmacData)
-		_, _ = io.Copy(&t.buffer, &t.sendSaver)
+		io.Copy(&t.buffer, &t.sendSaver)
 		t.handshakeStatus = 8
 		return t.buffer.Bytes(), nil
 	case 0:
@@ -266,7 +266,7 @@ func (t *tls12Ticket) packAuthData() (ret []byte) {
 	ret = make([]byte, retSize)
 
 	now := time.Now().Unix()
-	binary.BigEndian.PutUint32(ret[0:4], uint32(now))
+	binary.BigEndian.PutUint32(ret[:4], uint32(now))
 
 	rand.Read(ret[4 : 4+18])
 

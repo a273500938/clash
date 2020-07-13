@@ -49,7 +49,7 @@ func (a *authSHA1V4) Decode(b []byte) ([]byte, int, error) {
 		if binary.LittleEndian.Uint16(b[2:4]) != uint16(crc32&0xFFFF) {
 			return nil, 0, errAuthSHA1v4CRC32Error
 		}
-		length := int(binary.BigEndian.Uint16(b[0:2]))
+		length := int(binary.BigEndian.Uint16(b[:2]))
 		if length >= 8192 || length < 8 {
 			return nil, 0, errAuthSHA1v4DataLengthError
 		}
@@ -116,7 +116,7 @@ func (a *authSHA1V4) packData(data []byte) (ret []byte) {
 	retSize := randSize + dataSize + 8
 	ret = make([]byte, retSize)
 	// 0~1, ret size
-	binary.BigEndian.PutUint16(ret[0:2], uint16(retSize&0xFFFF))
+	binary.BigEndian.PutUint16(ret[:2], uint16(retSize&0xFFFF))
 	// 2~3, crc of ret size
 	crc32 := tools.CalcCRC32(ret, 2, 0xFFFFFFFF)
 	binary.LittleEndian.PutUint16(ret[2:4], uint16(crc32&0xFFFF))
@@ -165,12 +165,12 @@ func (a *authSHA1V4) packAuthData(data []byte) (ret []byte) {
 		a.connectionID = binary.LittleEndian.Uint32(b) & 0xFFFFFF
 	}
 	// 0~1, ret size
-	binary.BigEndian.PutUint16(ret[0:2], uint16(retSize&0xFFFF))
+	binary.BigEndian.PutUint16(ret[:2], uint16(retSize&0xFFFF))
 
 	// 2~6, crc of (ret size+salt+key)
 	salt := []byte("auth_sha1_v4")
 	crcData := make([]byte, len(salt)+len(a.Key)+2)
-	copy(crcData[0:2], ret[0:2])
+	copy(crcData[:2], ret[:2])
 	copy(crcData[2:], salt)
 	copy(crcData[2+len(salt):], a.Key)
 	crc32 := tools.CalcCRC32(crcData, len(crcData), 0xFFFFFFFF)
@@ -191,7 +191,7 @@ func (a *authSHA1V4) packAuthData(data []byte) (ret []byte) {
 	now := time.Now().Unix()
 	binary.LittleEndian.PutUint32(ret[dataOffset:dataOffset+4], uint32(now))
 	// rand size+10~(rand size+14), client ID
-	copy(ret[dataOffset+4:dataOffset+4+4], a.clientID[0:4])
+	copy(ret[dataOffset+4:dataOffset+4+4], a.clientID[:4])
 	// rand size+14~(rand size+18), connection ID
 	binary.LittleEndian.PutUint32(ret[dataOffset+8:dataOffset+8+4], a.connectionID)
 	// rand size+18~(rand size+18)+data length, data
@@ -203,7 +203,7 @@ func (a *authSHA1V4) packAuthData(data []byte) (ret []byte) {
 
 	h := tools.HmacSHA1(key, ret[:retSize-tools.HmacSHA1Len])
 	// (ret size-10)~(ret size)/(rand size)+18+data length~end, hmac
-	copy(ret[retSize-tools.HmacSHA1Len:], h[0:tools.HmacSHA1Len])
+	copy(ret[retSize-tools.HmacSHA1Len:], h[:tools.HmacSHA1Len])
 	return ret
 }
 

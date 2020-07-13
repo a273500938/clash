@@ -62,7 +62,7 @@ func (h *httpObfs) Encode(b []byte) ([]byte, error) {
 		if len(h.Param) > 0 {
 			customHeads := strings.Split(h.Param, "#")
 			if len(customHeads) > 2 {
-				customHeads = customHeads[0:2]
+				customHeads = customHeads[:2]
 			}
 			customHosts := h.Param
 			if len(customHeads) > 1 {
