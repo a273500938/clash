@@ -92,20 +92,27 @@ func (a *authSHA1V4) Encode(b []byte) ([]byte, error) {
 	}
 	const blockSize = 4096
 	for bSize > blockSize {
-		a.buffer.Write(a.packData(b[offset : offset+blockSize]))
+		packSize, randSize := a.packedDataSize(b[offset : offset+blockSize])
+		pack := pool.Get(packSize)
+		a.packData(b[offset:offset+blockSize], pack, randSize)
+		a.buffer.Write(pack)
+		pool.Put(pack)
 		offset += blockSize
 		bSize -= blockSize
 	}
 	if bSize > 0 {
-		a.buffer.Write(a.packData(b[offset:]))
+		packSize, randSize := a.packedDataSize(b[offset:])
+		pack := pool.Get(packSize)
+		a.packData(b[offset:], pack, randSize)
+		a.buffer.Write(pack)
+		pool.Put(pack)
 	}
 	return a.buffer.Bytes(), nil
 }
 
-func (a *authSHA1V4) packData(data []byte) (ret []byte) {
+func (a *authSHA1V4) packedDataSize(data []byte) (packSize, randSize int) {
 	dataSize := len(data)
-	randSize := 1
-
+	randSize = 1
 	if dataSize <= 1300 {
 		if dataSize > 400 {
 			randSize += rand.Intn(128)
@@ -113,10 +120,13 @@ func (a *authSHA1V4) packData(data []byte) (ret []byte) {
 			randSize += rand.Intn(1024)
 		}
 	}
+	packSize = randSize + dataSize + 8
+	return
+}
 
-	retSize := randSize + dataSize + 8
-	ret = pool.Get(retSize)
-	defer pool.Put(ret)
+func (a *authSHA1V4) packData(data, ret []byte, randSize int) {
+	dataSize := len(data)
+	retSize := len(ret)
 	// 0~1, ret size
 	binary.BigEndian.PutUint16(ret[:2], uint16(retSize&0xFFFF))
 	// 2~3, crc of ret size
@@ -136,8 +146,6 @@ func (a *authSHA1V4) packData(data []byte) (ret []byte) {
 	// (ret size-4)~end, adler32 of full data
 	adler := tools.CalcAdler32(ret[:retSize-4])
 	binary.LittleEndian.PutUint32(ret[retSize-4:], adler)
-
-	return ret
 }
 
 func (a *authSHA1V4) packAuthData(data []byte) (ret []byte) {

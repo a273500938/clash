@@ -117,20 +117,27 @@ func (a *authAES128) Encode(b []byte) ([]byte, error) {
 	}
 	const blockSize = 4096
 	for bSize > blockSize {
-		a.buffer.Write(a.packData(b[offset : offset+blockSize]))
+		packSize, randSize := a.packedDataSize(b[offset : offset+blockSize])
+		pack := pool.Get(packSize)
+		a.packData(b[offset:offset+blockSize], pack, randSize)
+		a.buffer.Write(pack)
+		pool.Put(pack)
 		bSize -= blockSize
 		offset += blockSize
 	}
 	if bSize > 0 {
-		a.buffer.Write(a.packData(b[offset:]))
+		packSize, randSize := a.packedDataSize(b[offset:])
+		pack := pool.Get(packSize)
+		a.packData(b[offset:], pack, randSize)
+		a.buffer.Write(pack)
+		pool.Put(pack)
 	}
 	return a.buffer.Bytes(), nil
 }
 
-func (a *authAES128) packData(data []byte) (ret []byte) {
+func (a *authAES128) packedDataSize(data []byte) (packSize, randSize int) {
 	dataSize := len(data)
-	randSize := 1
-
+	randSize = 1
 	if dataSize <= 1200 {
 		if a.packID > 4 {
 			randSize += rand.Intn(32)
@@ -142,10 +149,13 @@ func (a *authAES128) packData(data []byte) (ret []byte) {
 			}
 		}
 	}
+	packSize = randSize + dataSize + 8
+	return
+}
 
-	retSize := randSize + dataSize + 8
-	ret = pool.Get(retSize)
-	defer pool.Put(ret)
+func (a *authAES128) packData(data, ret []byte, randSize int) {
+	dataSize := len(data)
+	retSize := len(ret)
 	// 0~1, ret_size
 	binary.LittleEndian.PutUint16(ret[0:], uint16(retSize&0xFFFF))
 	// 2~3, hmac
@@ -173,7 +183,6 @@ func (a *authAES128) packData(data []byte) (ret []byte) {
 	a.packID++
 	h = a.hmac(key, ret[:retSize-4])
 	copy(ret[retSize-4:], h[:4])
-	return
 }
 
 func (a *authAES128) packAuthData(data []byte) (ret []byte) {
