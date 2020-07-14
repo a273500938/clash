@@ -31,14 +31,14 @@ func (c *Conn) Read(b []byte) (int, error) {
 		return n, nil
 	}
 	buf := pool.Get(pool.RelayBufferSize)
+	defer pool.Put(buf)
 	n, err := c.Conn.Read(buf)
 	if err != nil {
-		pool.Put(buf)
 		return 0, err
 	}
 	c.underDecoded.Write(buf[:n])
-	buf = c.underDecoded.Bytes()
-	decoded, length, err := c.Decode(buf)
+	underDecoded := c.underDecoded.Bytes()
+	decoded, length, err := c.Decode(underDecoded)
 	if err != nil {
 		c.underDecoded.Reset()
 		return 0, nil

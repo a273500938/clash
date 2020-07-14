@@ -24,29 +24,37 @@ func (c *Conn) Read(b []byte) (int, error) {
 		n := copy(b, c.buf[c.offset:])
 		c.offset += n
 		if c.offset == len(c.buf) {
+			pool.Put(c.buf)
 			c.buf = nil
 		}
 		return n, nil
 	}
 
 	buf := pool.Get(pool.RelayBufferSize)
+	defer pool.Put(buf)
 	n, err := c.Conn.Read(buf)
 	if err != nil {
-		pool.Put(buf)
 		return 0, err
 	}
 	decoded, sendback, err := c.Decode(buf[:n])
+	// decoded may be part of buf
+	decodedData := pool.Get(len(decoded))
+	copy(decodedData, decoded)
 	if err != nil {
+		pool.Put(decodedData)
 		return 0, err
 	}
 	if sendback {
 		c.Write(nil)
+		pool.Put(decodedData)
 		return 0, nil
 	}
-	n = copy(b, decoded)
-	if len(decoded) > len(b) {
-		c.buf = decoded
+	n = copy(b, decodedData)
+	if len(decodedData) > len(b) {
+		c.buf = decodedData
 		c.offset = n
+	} else {
+		pool.Put(decodedData)
 	}
 	return n, err
 }
