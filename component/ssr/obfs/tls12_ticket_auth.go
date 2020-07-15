@@ -48,6 +48,10 @@ func (t *tls12Ticket) initForConn() Obfs {
 	return r
 }
 
+func (t *tls12Ticket) GetObfsOverhead() int {
+	return 5
+}
+
 func (t *tls12Ticket) Decode(b []byte) ([]byte, bool, error) {
 	if t.handshakeStatus == -1 {
 		return b, false, nil

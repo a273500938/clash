@@ -15,6 +15,7 @@ var (
 // Obfs provides methods for decoding and encoding
 type Obfs interface {
 	initForConn() Obfs
+	GetObfsOverhead() int
 	Decode(b []byte) ([]byte, bool, error)
 	Encode(b []byte) ([]byte, error)
 }

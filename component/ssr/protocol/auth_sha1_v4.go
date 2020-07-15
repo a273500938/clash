@@ -28,10 +28,11 @@ func newAuthSHA1V4(b *Base) Protocol {
 func (a *authSHA1V4) initForConn(iv []byte) Protocol {
 	return &authSHA1V4{
 		Base: &Base{
-			IV:     iv,
-			Key:    a.Key,
-			TCPMss: a.TCPMss,
-			Param:  a.Param,
+			IV:       iv,
+			Key:      a.Key,
+			TCPMss:   a.TCPMss,
+			Overhead: a.Overhead,
+			Param:    a.Param,
 		},
 		authData: a.authData,
 	}
@@ -39,6 +40,14 @@ func (a *authSHA1V4) initForConn(iv []byte) Protocol {
 
 func (a *authSHA1V4) SetIV(iv []byte) {
 	a.IV = iv
+}
+
+func (a *authSHA1V4) GetProtocolOverhead() int {
+	return 7
+}
+
+func (a *authSHA1V4) SetOverhead(overhead int) {
+	a.Overhead = overhead
 }
 
 func (a *authSHA1V4) Decode(b []byte) ([]byte, int, error) {

@@ -101,6 +101,7 @@ func NewShadowSocksR(option ShadowSocksROption) (*ShadowSocksR, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ssr %s initialize protocol error: %w", addr, err)
 	}
+	protocol.SetOverhead(obfs.GetObfsOverhead() + protocol.GetProtocolOverhead())
 
 	return &ShadowSocksR{
 		Base: &Base{

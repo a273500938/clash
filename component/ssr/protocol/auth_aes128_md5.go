@@ -46,10 +46,11 @@ func newAuthAES128MD5(b *Base) Protocol {
 func (a *authAES128) initForConn(iv []byte) Protocol {
 	return &authAES128{
 		Base: &Base{
-			IV:     iv,
-			Key:    a.Key,
-			TCPMss: a.TCPMss,
-			Param:  a.Param,
+			IV:       iv,
+			Key:      a.Key,
+			TCPMss:   a.TCPMss,
+			Overhead: a.Overhead,
+			Param:    a.Param,
 		},
 		recvInfo:   &recvInfo{recvID: 1, buffer: new(bytes.Buffer)},
 		authData:   a.authData,
@@ -62,6 +63,14 @@ func (a *authAES128) initForConn(iv []byte) Protocol {
 
 func (a *authAES128) SetIV(iv []byte) {
 	a.IV = iv
+}
+
+func (a *authAES128) GetProtocolOverhead() int {
+	return 9
+}
+
+func (a *authAES128) SetOverhead(overhead int) {
+	a.Overhead = overhead
 }
 
 func (a *authAES128) Decode(b []byte) ([]byte, int, error) {

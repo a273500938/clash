@@ -12,6 +12,10 @@ func newPlain(b *Base) Obfs {
 
 func (p *plain) initForConn() Obfs { return &plain{} }
 
+func (p *plain) GetObfsOverhead() int {
+	return 0
+}
+
 func (p *plain) Encode(b []byte) ([]byte, error) {
 	return b, nil
 }

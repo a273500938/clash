@@ -16,6 +16,13 @@ func (o *origin) SetIV(iv []byte) {
 	o.IV = iv
 }
 
+func (o *origin) GetProtocolOverhead() int {
+	return 0
+}
+
+func (o *origin) SetOverhead(overhead int) {
+}
+
 func (o *origin) Decode(b []byte) ([]byte, int, error) {
 	return b, len(b), nil
 }

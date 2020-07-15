@@ -37,6 +37,8 @@ type rndMethod func(dataSize int, random *shift128PlusContext, lastHash []byte, 
 type Protocol interface {
 	initForConn(iv []byte) Protocol
 	SetIV(iv []byte)
+	GetProtocolOverhead() int
+	SetOverhead(int)
 	Decode([]byte) ([]byte, int, error)
 	Encode([]byte) ([]byte, error)
 }

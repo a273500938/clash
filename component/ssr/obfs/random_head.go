@@ -30,6 +30,10 @@ func (r *randomHead) initForConn() Obfs {
 	}
 }
 
+func (r *randomHead) GetObfsOverhead() int {
+	return 0
+}
+
 func (r *randomHead) Encode(b []byte) (encoded []byte, err error) {
 	if !r.firstRequest {
 		return b, nil

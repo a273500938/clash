@@ -33,6 +33,10 @@ func (h *httpObfs) initForConn() Obfs {
 	}
 }
 
+func (h *httpObfs) GetObfsOverhead() int {
+	return 0
+}
+
 func (h *httpObfs) Decode(b []byte) ([]byte, bool, error) {
 	if h.firstResponse {
 		idx := bytes.Index(b, []byte("\r\n\r\n"))

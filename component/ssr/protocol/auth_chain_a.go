@@ -57,10 +57,11 @@ func newAuthChainA(b *Base) Protocol {
 func (a *authChain) initForConn(iv []byte) Protocol {
 	r := &authChain{
 		Base: &Base{
-			IV:     iv,
-			Key:    a.Key,
-			TCPMss: a.TCPMss,
-			Param:  a.Param,
+			IV:       iv,
+			Key:      a.Key,
+			TCPMss:   a.TCPMss,
+			Overhead: a.Overhead,
+			Param:    a.Param,
 		},
 		recvInfo:   &recvInfo{recvID: 1, buffer: new(bytes.Buffer)},
 		authData:   a.authData,
@@ -69,11 +70,22 @@ func (a *authChain) initForConn(iv []byte) Protocol {
 		hashDigest: a.hashDigest,
 		rnd:        a.rnd,
 	}
+	if r.salt == "auth_chain_b" {
+		initDataSize(r)
+	}
 	return r
 }
 
 func (a *authChain) SetIV(iv []byte) {
 	a.IV = iv
+}
+
+func (a *authChain) GetProtocolOverhead() int {
+	return 4
+}
+
+func (a *authChain) SetOverhead(overhead int) {
+	a.Overhead = overhead
 }
 
 func (a *authChain) Decode(b []byte) ([]byte, int, error) {
@@ -85,7 +97,7 @@ func (a *authChain) Decode(b []byte) ([]byte, int, error) {
 	for len(b) > 4 {
 		binary.LittleEndian.PutUint32(key[len(a.userKey):], a.recvID)
 		dataLen := (int)((uint(b[1]^a.lastServerHash[15]) << 8) + uint(b[0]^a.lastServerHash[14]))
-		randLen := a.getServerRandLen(dataLen, 4)
+		randLen := a.getServerRandLen(dataLen, a.Overhead)
 		length := randLen + dataLen
 		if length >= 4096 {
 			return nil, 0, errAuthChainDataLengthError
@@ -134,7 +146,7 @@ func (a *authChain) Encode(b []byte) ([]byte, error) {
 		bSize -= headSize
 		a.headerSent = true
 	}
-	var unitSize = a.TCPMss - 4
+	var unitSize = a.TCPMss - a.Overhead
 	for bSize > unitSize {
 		dataLen, randLength := a.packedDataLen(b[offset : offset+unitSize])
 		d := pool.Get(dataLen)
@@ -164,7 +176,7 @@ func (a *authChain) getServerRandLen(dataLength int, overhead int) int {
 
 func (a *authChain) packedDataLen(data []byte) (chunkLength, randLength int) {
 	dataLength := len(data)
-	randLength = a.getClientRandLen(dataLength, 4)
+	randLength = a.getClientRandLen(dataLength, a.Overhead)
 	chunkLength = randLength + dataLength + 2 + 2
 	return
 }
@@ -219,7 +231,7 @@ func (a *authChain) packAuthData(data []byte) (outData []byte) {
 	binary.LittleEndian.PutUint32(encrypt[:4], uint32(t))
 	copy(encrypt[4:8], a.clientID)
 	binary.LittleEndian.PutUint32(encrypt[8:], a.connectionID)
-	binary.LittleEndian.PutUint16(encrypt[12:], 4)
+	binary.LittleEndian.PutUint16(encrypt[12:], uint16(a.Overhead))
 	binary.LittleEndian.PutUint16(encrypt[14:], 0)
 
 	// first 12 bytes
