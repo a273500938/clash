@@ -76,10 +76,6 @@ func (a *authChain) initForConn(iv []byte) Protocol {
 	return r
 }
 
-func (a *authChain) SetIV(iv []byte) {
-	a.IV = iv
-}
-
 func (a *authChain) GetProtocolOverhead() int {
 	return 4
 }

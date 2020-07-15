@@ -61,10 +61,6 @@ func (a *authAES128) initForConn(iv []byte) Protocol {
 	}
 }
 
-func (a *authAES128) SetIV(iv []byte) {
-	a.IV = iv
-}
-
 func (a *authAES128) GetProtocolOverhead() int {
 	return 9
 }

@@ -12,10 +12,6 @@ func newOrigin(b *Base) Protocol {
 
 func (o *origin) initForConn(iv []byte) Protocol { return &origin{} }
 
-func (o *origin) SetIV(iv []byte) {
-	o.IV = iv
-}
-
 func (o *origin) GetProtocolOverhead() int {
 	return 0
 }

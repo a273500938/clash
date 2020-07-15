@@ -38,10 +38,6 @@ func (a *authSHA1V4) initForConn(iv []byte) Protocol {
 	}
 }
 
-func (a *authSHA1V4) SetIV(iv []byte) {
-	a.IV = iv
-}
-
 func (a *authSHA1V4) GetProtocolOverhead() int {
 	return 7
 }
