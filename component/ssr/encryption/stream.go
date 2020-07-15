@@ -50,8 +50,10 @@ func (c *Conn) Read(b []byte) (int, error) {
 func (c *Conn) initWriter() error {
 	if c.w == nil {
 		iv := c.iv
-		if _, err := c.Conn.Write(iv); err != nil {
-			return err
+		if len(iv) > 0 {
+			if _, err := c.Conn.Write(iv); err != nil {
+				return err
+			}
 		}
 		c.w = shadowstream.NewWriter(c.Conn, c.Encrypter(iv))
 	}
