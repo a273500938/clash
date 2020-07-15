@@ -107,7 +107,7 @@ func (h *httpObfs) Encode(b []byte) ([]byte, error) {
 		if len(headData) < bSize {
 			encoded = make([]byte, len(httpBuf)+(bSize-len(headData)))
 			copy(encoded, []byte(httpBuf))
-			copy(encoded, b[len(headData):])
+			copy(encoded[len(httpBuf):], b[len(headData):])
 		} else {
 			encoded = []byte(httpBuf)
 		}
