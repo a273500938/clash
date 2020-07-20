@@ -80,7 +80,7 @@ func (a *authAES128) Decode(b []byte) ([]byte, int, error) {
 		binary.LittleEndian.PutUint32(key[len(key)-4:], a.recvID)
 
 		h := a.hmac(key, b[:2])
-		if bytes.Equal(h[:2], b[2:4]) {
+		if !bytes.Equal(h[:2], b[2:4]) {
 			return nil, 0, errAuthAES128HMACError
 		}
 		length := int(binary.LittleEndian.Uint16(b[:2]))
