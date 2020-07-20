@@ -1,5 +1,7 @@
 package encryption
 
+// copied from [go-shadowsocks2](https://github.com/Dreamacro/go-shadowsocks2)
+
 import (
 	"crypto/rand"
 	"io"
@@ -47,6 +49,15 @@ func (c *Conn) Read(b []byte) (int, error) {
 	return c.r.Read(b)
 }
 
+func (c *Conn) WriteTo(w io.Writer) (int64, error) {
+	if c.r == nil {
+		if err := c.initReader(); err != nil {
+			return 0, err
+		}
+	}
+	return c.r.WriteTo(w)
+}
+
 func (c *Conn) initWriter() error {
 	if c.w == nil {
 		iv := c.iv
@@ -67,6 +78,15 @@ func (c *Conn) Write(b []byte) (int, error) {
 		}
 	}
 	return c.w.Write(b)
+}
+
+func (c *Conn) ReadFrom(r io.Reader) (int64, error) {
+	if c.w == nil {
+		if err := c.initWriter(); err != nil {
+			return 0, err
+		}
+	}
+	return c.w.ReadFrom(r)
 }
 
 // IV returns the iv of a Conn

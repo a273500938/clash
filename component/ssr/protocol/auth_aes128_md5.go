@@ -80,7 +80,7 @@ func (a *authAES128) Decode(b []byte) ([]byte, int, error) {
 		binary.LittleEndian.PutUint32(key[len(key)-4:], a.recvID)
 
 		h := a.hmac(key, b[:2])
-		if h[0] != b[2] || h[1] != b[3] {
+		if bytes.Equal(h[:2], b[2:4]) {
 			return nil, 0, errAuthAES128HMACError
 		}
 		length := int(binary.LittleEndian.Uint16(b[:2]))
@@ -138,6 +138,44 @@ func (a *authAES128) Encode(b []byte) ([]byte, error) {
 		pool.Put(pack)
 	}
 	return a.buffer.Bytes(), nil
+}
+
+func (a *authAES128) DecodePacket(b []byte) ([]byte, int, error) {
+	bSize := len(b)
+	h := a.hmac(a.Key, b[:bSize-4])
+	if !bytes.Equal(h[:4], b[bSize-4:]) {
+		return nil, 0, errAuthAES128HMACError
+	}
+	return b[:bSize-4], bSize - 4, nil
+}
+
+func (a *authAES128) EncodePacket(b []byte) ([]byte, error) {
+	a.initUserKeyAndID()
+
+	var buf bytes.Buffer
+	buf.Write(b)
+	buf.Write(a.uid[:])
+	h := a.hmac(a.userKey, buf.Bytes())
+	buf.Write(h[:4])
+	return buf.Bytes(), nil
+}
+
+func (a *authAES128) initUserKeyAndID() {
+	if a.userKey == nil {
+		params := strings.Split(a.Param, ":")
+		if len(params) >= 2 {
+			if userID, err := strconv.ParseUint(params[0], 10, 32); err == nil {
+				binary.LittleEndian.PutUint32(a.uid[:], uint32(userID))
+				a.userKey = a.hashDigest([]byte(params[1]))
+			}
+		}
+
+		if a.userKey == nil {
+			rand.Read(a.uid[:])
+			a.userKey = make([]byte, len(a.Key))
+			copy(a.userKey, a.Key)
+		}
+	}
 }
 
 func (a *authAES128) packedDataSize(data []byte) (packSize, randSize int) {
@@ -231,21 +269,7 @@ func (a *authAES128) packAuthData(data []byte) (ret []byte) {
 	binary.LittleEndian.PutUint16(encrypt[12:], uint16(retSize&0xFFFF))
 	binary.LittleEndian.PutUint16(encrypt[14:], uint16(randSize&0xFFFF))
 
-	if a.userKey == nil {
-		params := strings.Split(a.Param, ":")
-		if len(params) >= 2 {
-			if userID, err := strconv.ParseUint(params[0], 10, 32); err == nil {
-				binary.LittleEndian.PutUint32(a.uid[:], uint32(userID))
-				a.userKey = a.hashDigest([]byte(params[1]))
-			}
-		}
-
-		if a.userKey == nil {
-			rand.Read(a.uid[:])
-			a.userKey = make([]byte, len(a.Key))
-			copy(a.userKey, a.Key)
-		}
-	}
+	a.initUserKeyAndID()
 
 	aesCipherKey := encryption.Kdf(base64.StdEncoding.EncodeToString(a.userKey)+a.salt, 16)
 	block, err := aes.NewCipher(aesCipherKey)

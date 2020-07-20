@@ -6,8 +6,8 @@ import (
 	"github.com/Dreamacro/clash/common/pool"
 )
 
-// StreamConn wraps a stream-oriented net.Conn with obfs decoding/encoding
-func StreamConn(c net.Conn, o Obfs) net.Conn {
+// NewConn wraps a stream-oriented net.Conn with obfs decoding/encoding
+func NewConn(c net.Conn, o Obfs) net.Conn {
 	return &Conn{Conn: c, Obfs: o.initForConn()}
 }
 

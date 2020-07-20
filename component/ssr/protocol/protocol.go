@@ -40,6 +40,8 @@ type Protocol interface {
 	SetOverhead(int)
 	Decode([]byte) ([]byte, int, error)
 	Encode([]byte) ([]byte, error)
+	DecodePacket([]byte) ([]byte, int, error)
+	EncodePacket([]byte) ([]byte, error)
 }
 
 type protocolCreator func(b *Base) Protocol

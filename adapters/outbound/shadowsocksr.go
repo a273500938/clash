@@ -3,7 +3,6 @@ package outbound
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -32,16 +31,17 @@ type ShadowSocksROption struct {
 	ObfsParam     string `proxy:"obfs-param,omitempty"`
 	Protocol      string `proxy:"protocol"`
 	ProtocolParam string `proxy:"protocol-param,omitempty"`
+	UDP           bool   `proxy:"udp,omitempty"`
 }
 
 func (ssr *ShadowSocksR) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
-	c = obfs.StreamConn(c, ssr.obfs)
+	c = obfs.NewConn(c, ssr.obfs)
 	c = ssr.cipher.StreamConn(c)
 	conn, ok := c.(*encryption.Conn)
 	if !ok {
 		return nil, fmt.Errorf("invalid connection type")
 	}
-	c = protocol.StreamConn(c, ssr.protocol, conn.IV())
+	c = protocol.NewConn(c, ssr.protocol, conn.IV())
 	_, err := c.Write(serializesSocksAddr(metadata))
 	return c, err
 }
@@ -58,7 +58,19 @@ func (ssr *ShadowSocksR) DialContext(ctx context.Context, metadata *C.Metadata) 
 }
 
 func (ssr *ShadowSocksR) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
-	return nil, errors.New("UDP for SSR is not supported now")
+	pc, err := dialer.ListenPacket("udp", "")
+	if err != nil {
+		return nil, err
+	}
+
+	addr, err := resolveUDPAddr("udp", ssr.addr)
+	if err != nil {
+		return nil, err
+	}
+
+	pc = ssr.cipher.PacketConn(pc)
+	pc = protocol.NewPacketConn(pc, ssr.protocol)
+	return newPacketConn(&ssPacketConn{PacketConn: pc, rAddr: addr}, ssr), nil
 }
 
 func (ssr *ShadowSocksR) MarshalJSON() ([]byte, error) {
@@ -108,7 +120,7 @@ func NewShadowSocksR(option ShadowSocksROption) (*ShadowSocksR, error) {
 			name: option.Name,
 			addr: addr,
 			tp:   C.ShadowsocksR,
-			udp:  false,
+			udp:  option.UDP,
 		},
 		cipher:   ciph,
 		obfs:     obfs,

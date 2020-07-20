@@ -31,9 +31,9 @@ func (ciph *SSRStreamCipher) StreamConn(c net.Conn) net.Conn {
 	return NewConn(c, *ciph)
 }
 
-// PacketConn for ssr is not implemented now
+// PacketConn returns a PacketConn with net.PacketConn and ssr cipher
 func (ciph *SSRStreamCipher) PacketConn(c net.PacketConn) net.PacketConn {
-	return nil
+	return NewPacketConn(c, *ciph)
 }
 
 var streamList = map[string]struct {

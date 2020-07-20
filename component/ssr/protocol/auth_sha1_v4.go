@@ -115,6 +115,14 @@ func (a *authSHA1V4) Encode(b []byte) ([]byte, error) {
 	return a.buffer.Bytes(), nil
 }
 
+func (a *authSHA1V4) DecodePacket(b []byte) ([]byte, int, error) {
+	return b, len(b), nil
+}
+
+func (a *authSHA1V4) EncodePacket(b []byte) ([]byte, error) {
+	return b, nil
+}
+
 func (a *authSHA1V4) packedDataSize(data []byte) (packSize, randSize int) {
 	dataSize := len(data)
 	randSize = 1

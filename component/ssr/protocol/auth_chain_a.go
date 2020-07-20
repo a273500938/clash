@@ -162,6 +162,86 @@ func (a *authChain) Encode(b []byte) ([]byte, error) {
 	return a.buffer.Bytes(), nil
 }
 
+func (a *authChain) DecodePacket(b []byte) ([]byte, int, error) {
+	bSize := len(b)
+	if bSize < 9 {
+		return nil, 0, errAuthChainDataLengthError
+	}
+	h := a.hmac(a.userKey, b[:bSize-1])
+	if h[0] != b[bSize-1] {
+		return nil, 0, errAuthChainHMACError
+	}
+	hash := a.hmac(a.Key, b[bSize-8:bSize-1])
+	cipherKey := a.getRC4CipherKey(hash)
+	dec, _ := rc4.NewCipher(cipherKey)
+	randLength := udpGetRandLen(&a.randomServer, hash)
+	bSize -= 8 + randLength
+	dec.XORKeyStream(b, b[:bSize])
+	return b, bSize, nil
+}
+
+func (a *authChain) EncodePacket(b []byte) ([]byte, error) {
+	a.initUserKeyAndID()
+	authData := pool.Get(3)
+	defer pool.Put(authData)
+	rand.Read(authData)
+	hash := a.hmac(a.Key, authData)
+	uid := pool.Get(4)
+	defer pool.Put(uid)
+	for i := 0; i < 4; i++ {
+		uid[i] = a.uid[i] ^ hash[i]
+	}
+
+	cipherKey := a.getRC4CipherKey(hash)
+	enc, _ := rc4.NewCipher(cipherKey)
+	var buf bytes.Buffer
+	enc.XORKeyStream(b, b)
+	buf.Write(b)
+
+	randLength := udpGetRandLen(&a.randomClient, hash)
+	randBytes := pool.Get(randLength)
+	defer pool.Put(randBytes)
+	buf.Write(randBytes)
+
+	buf.Write(authData)
+	buf.Write(uid)
+
+	h := a.hmac(a.userKey, buf.Bytes())
+	buf.Write(h[:1])
+	return buf.Bytes(), nil
+}
+
+func (a *authChain) getRC4CipherKey(hash []byte) []byte {
+	base64UserKey := base64.StdEncoding.EncodeToString(a.userKey)
+	return a.calcRC4CipherKey(hash, base64UserKey)
+}
+
+func (a *authChain) calcRC4CipherKey(hash []byte, base64UserKey string) []byte {
+	password := pool.Get(len(base64UserKey) + base64.StdEncoding.EncodedLen(16))
+	defer pool.Put(password)
+	copy(password, base64UserKey)
+	base64.StdEncoding.Encode(password[len(base64UserKey):], hash[:16])
+	return encryption.Kdf(string(password), 16)
+}
+
+func (a *authChain) initUserKeyAndID() {
+	if a.userKey == nil {
+		params := strings.Split(a.Param, ":")
+		if len(params) >= 2 {
+			if userID, err := strconv.ParseUint(params[0], 10, 32); err == nil {
+				binary.LittleEndian.PutUint32(a.uid[:], uint32(userID))
+				a.userKey = []byte(params[1])[:len(a.userKey)]
+			}
+		}
+
+		if a.userKey == nil {
+			rand.Read(a.uid[:])
+			a.userKey = make([]byte, len(a.Key))
+			copy(a.userKey, a.Key)
+		}
+	}
+}
+
 func (a *authChain) getClientRandLen(dataLength int, overhead int) int {
 	return a.rnd(dataLength, &a.randomClient, a.lastClientHash, a.dataSizeList, a.dataSizeList2, overhead)
 }
@@ -239,21 +319,8 @@ func (a *authChain) packAuthData(data []byte) (outData []byte) {
 	var base64UserKey string
 	// uid & 16 bytes auth data
 	{
+		a.initUserKeyAndID()
 		uid := make([]byte, 4)
-		if a.userKey == nil {
-			params := strings.Split(a.Param, ":")
-			if len(params) >= 2 {
-				if userID, err := strconv.ParseUint(params[0], 10, 32); err == nil {
-					binary.LittleEndian.PutUint32(a.uid[:], uint32(userID))
-					a.userKey = a.hashDigest([]byte(params[1]))
-				}
-			}
-			if a.userKey == nil {
-				rand.Read(a.uid[:])
-				a.userKey = make([]byte, len(a.Key))
-				copy(a.userKey, a.Key)
-			}
-		}
 		for i := 0; i < 4; i++ {
 			uid[i] = a.uid[i] ^ a.lastClientHash[8+i]
 		}
@@ -279,11 +346,7 @@ func (a *authChain) packAuthData(data []byte) (outData []byte) {
 	}
 
 	// init cipher
-	password := make([]byte, len(base64UserKey)+base64.StdEncoding.EncodedLen(16))
-	copy(password, base64UserKey)
-	base64.StdEncoding.Encode(password[len(base64UserKey):], a.lastClientHash[:16])
-
-	cipherKey := encryption.Kdf(string(password), 16)
+	cipherKey := a.calcRC4CipherKey(a.lastClientHash, base64UserKey)
 	a.enc, _ = rc4.NewCipher(cipherKey)
 	a.dec, _ = rc4.NewCipher(cipherKey)
 
@@ -322,6 +385,11 @@ func authChainAGetRandLen(dataLength int, random *shift128PlusContext, lastHash 
 		return int(random.Next() % 521)
 	}
 	return int(random.Next() % 1021)
+}
+
+func udpGetRandLen(random *shift128PlusContext, lastHash []byte) int {
+	random.InitFromBin(lastHash[:16])
+	return int(random.Next() % 127)
 }
 
 type shift128PlusContext struct {
