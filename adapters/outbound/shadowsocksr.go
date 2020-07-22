@@ -8,15 +8,16 @@ import (
 	"strconv"
 
 	"github.com/Dreamacro/clash/component/dialer"
-	"github.com/Dreamacro/clash/component/ssr/encryption"
 	"github.com/Dreamacro/clash/component/ssr/obfs"
 	"github.com/Dreamacro/clash/component/ssr/protocol"
 	C "github.com/Dreamacro/clash/constant"
+	"github.com/Dreamacro/go-shadowsocks2/core"
+	"github.com/Dreamacro/go-shadowsocks2/shadowstream"
 )
 
 type ShadowSocksR struct {
 	*Base
-	cipher   *encryption.SSRStreamCipher
+	cipher   *core.StreamCipher
 	obfs     obfs.Obfs
 	protocol protocol.Protocol
 }
@@ -37,12 +38,16 @@ type ShadowSocksROption struct {
 func (ssr *ShadowSocksR) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
 	c = obfs.NewConn(c, ssr.obfs)
 	c = ssr.cipher.StreamConn(c)
-	conn, ok := c.(*encryption.Conn)
+	conn, ok := c.(*shadowstream.Conn)
 	if !ok {
 		return nil, fmt.Errorf("invalid connection type")
 	}
-	c = protocol.NewConn(c, ssr.protocol, conn.IV())
-	_, err := c.Write(serializesSocksAddr(metadata))
+	iv, err := conn.ObtainWriteIV()
+	if err != nil {
+		return nil, err
+	}
+	c = protocol.NewConn(c, ssr.protocol, iv)
+	_, err = c.Write(serializesSocksAddr(metadata))
 	return c, err
 }
 
@@ -83,18 +88,18 @@ func NewShadowSocksR(option ShadowSocksROption) (*ShadowSocksR, error) {
 	addr := net.JoinHostPort(option.Server, strconv.Itoa(option.Port))
 	cipher := option.Cipher
 	password := option.Password
-	coreCiph, err := encryption.PickCipher(cipher, nil, password)
+	coreCiph, err := core.PickCipher(cipher, nil, password)
 	if err != nil {
 		return nil, fmt.Errorf("ssr %s initialize cipher error: %w", addr, err)
 	}
-	ciph, ok := coreCiph.(*encryption.SSRStreamCipher)
+	ciph, ok := coreCiph.(*core.StreamCipher)
 	if !ok {
 		return nil, fmt.Errorf("%s is not a supported stream cipher in ssr", cipher)
 	}
 
 	obfs, err := obfs.PickObfs(option.Obfs, &obfs.Base{
 		IVSize:  ciph.IVSize(),
-		Key:     ciph.Key(),
+		Key:     ciph.Key,
 		HeadLen: 30,
 		Host:    option.Server,
 		Port:    option.Port,
@@ -106,7 +111,7 @@ func NewShadowSocksR(option ShadowSocksROption) (*ShadowSocksR, error) {
 
 	protocol, err := protocol.PickProtocol(option.Protocol, &protocol.Base{
 		IV:     nil,
-		Key:    ciph.Key(),
+		Key:    ciph.Key,
 		TCPMss: 1460,
 		Param:  option.ProtocolParam,
 	})

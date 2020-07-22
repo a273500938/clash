@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/Dreamacro/clash/common/pool"
-	"github.com/Dreamacro/clash/component/ssr/encryption"
 	"github.com/Dreamacro/clash/component/ssr/tools"
+	"github.com/Dreamacro/go-shadowsocks2/core"
 )
 
 type authChain struct {
@@ -221,7 +221,7 @@ func (a *authChain) calcRC4CipherKey(hash []byte, base64UserKey string) []byte {
 	defer pool.Put(password)
 	copy(password, base64UserKey)
 	base64.StdEncoding.Encode(password[len(base64UserKey):], hash[:16])
-	return encryption.Kdf(string(password), 16)
+	return core.Kdf(string(password), 16)
 }
 
 func (a *authChain) initUserKeyAndID() {
@@ -325,7 +325,7 @@ func (a *authChain) packAuthData(data []byte) (outData []byte) {
 			uid[i] = a.uid[i] ^ a.lastClientHash[8+i]
 		}
 		base64UserKey = base64.StdEncoding.EncodeToString(a.userKey)
-		aesCipherKey := encryption.Kdf(base64UserKey+a.salt, 16)
+		aesCipherKey := core.Kdf(base64UserKey+a.salt, 16)
 		block, err := aes.NewCipher(aesCipherKey)
 		if err != nil {
 			return

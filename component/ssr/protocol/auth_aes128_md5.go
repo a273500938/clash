@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/Dreamacro/clash/common/pool"
-	"github.com/Dreamacro/clash/component/ssr/encryption"
 	"github.com/Dreamacro/clash/component/ssr/tools"
+	"github.com/Dreamacro/go-shadowsocks2/core"
 )
 
 type authAES128 struct {
@@ -271,7 +271,7 @@ func (a *authAES128) packAuthData(data []byte) (ret []byte) {
 
 	a.initUserKeyAndID()
 
-	aesCipherKey := encryption.Kdf(base64.StdEncoding.EncodeToString(a.userKey)+a.salt, 16)
+	aesCipherKey := core.Kdf(base64.StdEncoding.EncodeToString(a.userKey)+a.salt, 16)
 	block, err := aes.NewCipher(aesCipherKey)
 	if err != nil {
 		return nil
