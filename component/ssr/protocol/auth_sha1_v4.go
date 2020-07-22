@@ -3,6 +3,8 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
+	"hash/adler32"
+	"hash/crc32"
 	"math/rand"
 	"time"
 
@@ -51,8 +53,8 @@ func (a *authSHA1V4) Decode(b []byte) ([]byte, int, error) {
 	bSize := len(b)
 	originalSize := bSize
 	for bSize > 4 {
-		crc32 := tools.CalcCRC32(b, 2, 0xFFFFFFFF)
-		if binary.LittleEndian.Uint16(b[2:4]) != uint16(crc32&0xFFFF) {
+		crc := crc32.ChecksumIEEE(b[:2]) & 0xFFFF
+		if binary.LittleEndian.Uint16(b[2:4]) != uint16(crc) {
 			return nil, 0, errAuthSHA1v4CRC32Error
 		}
 		length := int(binary.BigEndian.Uint16(b[:2]))
@@ -63,7 +65,7 @@ func (a *authSHA1V4) Decode(b []byte) ([]byte, int, error) {
 			break
 		}
 
-		if tools.CheckAdler32(b, length) {
+		if adler32.Checksum(b[:length-4]) == binary.LittleEndian.Uint32(b[length-4:]) {
 			pos := int(b[4])
 			if pos != 0xFF {
 				pos += 4
@@ -143,8 +145,8 @@ func (a *authSHA1V4) packData(data, ret []byte, randSize int) {
 	// 0~1, ret size
 	binary.BigEndian.PutUint16(ret[:2], uint16(retSize&0xFFFF))
 	// 2~3, crc of ret size
-	crc32 := tools.CalcCRC32(ret, 2, 0xFFFFFFFF)
-	binary.LittleEndian.PutUint16(ret[2:4], uint16(crc32&0xFFFF))
+	crc := crc32.ChecksumIEEE(ret[:2]) & 0xFFFF
+	binary.LittleEndian.PutUint16(ret[2:4], uint16(crc))
 	// 4, rand size
 	if randSize < 128 {
 		ret[4] = uint8(randSize & 0xFF)
@@ -157,7 +159,7 @@ func (a *authSHA1V4) packData(data, ret []byte, randSize int) {
 		copy(ret[randSize+4:], data)
 	}
 	// (ret size-4)~end, adler32 of full data
-	adler := tools.CalcAdler32(ret[:retSize-4])
+	adler := adler32.Checksum(ret[:retSize-4])
 	binary.LittleEndian.PutUint32(ret[retSize-4:], adler)
 }
 
@@ -196,9 +198,9 @@ func (a *authSHA1V4) packAuthData(data []byte) (ret []byte) {
 	copy(crcData[:2], ret[:2])
 	copy(crcData[2:], salt)
 	copy(crcData[2+len(salt):], a.Key)
-	crc32 := tools.CalcCRC32(crcData, len(crcData), 0xFFFFFFFF)
+	crc := crc32.ChecksumIEEE(crcData) & 0xFFFFFFFF
 	// 2~6, crc of (ret size+salt+key)
-	binary.LittleEndian.PutUint32(ret[2:], crc32)
+	binary.LittleEndian.PutUint32(ret[2:], crc)
 	// 6~(rand size+6), rand numbers
 	rand.Read(ret[dataOffset-randSize : dataOffset])
 	// 6, rand size

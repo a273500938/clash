@@ -1,9 +1,9 @@
 package obfs
 
 import (
+	"encoding/binary"
+	"hash/crc32"
 	"math/rand"
-
-	"github.com/Dreamacro/clash/component/ssr/tools"
 )
 
 type randomHead struct {
@@ -55,7 +55,8 @@ func (r *randomHead) Encode(b []byte) (encoded []byte, err error) {
 		size := rand.Intn(96) + 8
 		encoded = make([]byte, size)
 		rand.Read(encoded)
-		tools.SetCRC32(encoded, size)
+		crc := (0xFFFFFFFF - crc32.ChecksumIEEE(encoded[:size-4])) & 0xFFFFFFFF
+		binary.LittleEndian.PutUint32(encoded[size-4:], crc)
 
 		d := make([]byte, bSize)
 		copy(d, b)
